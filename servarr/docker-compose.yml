@@ -1,0 +1,111 @@
+# Sonarr, Radarr, Jackett, Transmission w/ OpenVPN Setup.
+# Images: 
+# REPOSITORY                                TAG   
+# ghcr.io/linuxserver/jackett               latest
+# ghcr.io/linuxserver/radarr                latest
+# ghcr.io/linuxserver/jackett               latest
+# ghcr.io/linuxserver/homeassistant         latest
+# ghcr.io/linuxserver/sonarr                latest
+# haugene/transmission-openvpn              latest
+version: '3'
+services:
+  sonarr:
+    image: ghcr.io/linuxserver/sonarr
+    container_name: sonarr
+    restart: always
+    network_mode: bridge
+    ports:
+      - 8989:8989
+    environment:
+      - PUID
+      - PGID
+      - TZ=America/Los_Angeles
+    volumes:
+      - /volume1/docker/sonarr/config:/config
+      - /volume1/Media/TV:/tv
+      - /volume1/Downloads/torrents/completed:/downloads
+    links:
+      - transmission-ovpn
+      - jackett
+    depends_on:
+      - transmission-ovpn
+      - jackett
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://localhost:514"
+
+
+  radarr:
+    image: ghcr.io/linuxserver/radarr
+    container_name: radarr
+    restart: always
+    network_mode: bridge
+    ports:
+      - 7878:7878
+    environment:
+      - PUID
+      - PGID
+      - TZ
+    volumes:
+      - /volume1/docker/radarr/config:/config
+      - /volume1/Media/Movies:/movies
+      - /volume1/Downloads/torrents/completed:/downloads
+    links:
+      - transmission-ovpn
+      - jackett
+    depends_on:
+      - transmission-ovpn
+      - jackett
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://localhost:514"
+
+
+  jackett:
+    image: ghcr.io/linuxserver/jackett
+    container_name: jackett
+    restart: always
+    network_mode: bridge
+    ports:
+      - 9117:9117
+    environment:
+      - PUID
+      - PGID
+      - TZ
+    volumes:
+      - /volume1/docker/jackett/config:/config
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://localhost:514"
+
+
+  transmission-ovpn:
+    image: haugene/transmission-openvpn:latest
+    container_name: transmission-ovpn
+    restart: always
+    network_mode: bridge
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - /volume1/Downloads/torrents:/data
+    ports:
+      - 9091:9091
+    environment:
+      - PUID
+      - PGID
+      - TZ
+      - OPENVPN_PROVIDER
+      - OPENVPN_USERNAME
+      - OPENVPN_PASSWORD
+      - LOCAL_NETWORK=192.168.2.0/24
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "tcp://localhost:514"
+
